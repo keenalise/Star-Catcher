@@ -61,7 +61,7 @@ class FallingObject:
         if self.morph_to and self.y >= self.morph_y:
             self.kind = self.morph_to
             self.morph_to = None
-            self.just_morphed = 0.25
+            self.just_morphed = self.MORPH_TIME
         if self.just_morphed > 0:
             self.just_morphed -= dt
 
@@ -80,10 +80,19 @@ class FallingObject:
     def off_screen(self, height):
         return self.y - self.radius > height
 
+    MORPH_TIME = 0.25
+
     def draw(self, screen, assets):
         size = self.size
-        if self.just_morphed > 0:  # little pop when it transforms
-            size = int(size * (1.0 + self.just_morphed))
+        if self.just_morphed > 0:  # expanding white ring + little pop
+            prog = 1.0 - self.just_morphed / self.MORPH_TIME
+            size = int(size * (1.0 + 0.35 * self.just_morphed))
+            ring_r = int(self.radius * (1.0 + prog * 1.4))
+            alpha = max(0, int(210 * (1.0 - prog)))
+            puff = pygame.Surface((ring_r * 2 + 6, ring_r * 2 + 6), pygame.SRCALPHA)
+            pygame.draw.circle(puff, (255, 255, 255, alpha),
+                               (ring_r + 3, ring_r + 3), ring_r, max(2, int(self.radius * 0.2)))
+            screen.blit(puff, (int(self.x) - ring_r - 3, int(self.y) - ring_r - 3))
         img = assets.scaled(self.kind, (size, size))
         rect = img.get_rect(center=(int(self.x), int(self.y)))
         screen.blit(img, rect)
