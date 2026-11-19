@@ -9,7 +9,7 @@ from . import ui
 from .assets import Assets
 from .audio import Audio
 from .effects import Blast
-from .entities import FallingObject, Basket, APPLE, BOMB, SHIELD, EXTEND
+from .entities import FallingObject, Basket, APPLE, BOMB, SHIELD, EXTEND, HEART
 from .storage import load_highscore, save_highscore
 
 MENU, PLAYING, OVER, HELP = "menu", "playing", "over", "help"
@@ -312,6 +312,13 @@ class Game:
             self.basket.set_extended(True, self.width)
             self.audio.play("chime")
             self._spawn()
+        elif kind == HEART:
+            if self.lives < S.START_LIVES:
+                self.lives += 1          # restore a lost heart
+            else:
+                self.score += 2          # already full -> small bonus instead
+            self.audio.play("chime")
+            self._spawn()
 
     def _on_miss(self, kind):
         if kind == APPLE:
@@ -405,6 +412,7 @@ class Game:
         ("bomb", "...and bombs morph into apples. Don't be fooled!"),
         ("shield", "Shield (rare): blocks bombs for 15 seconds."),
         ("extend", "Extend (rare): widens your basket for 9 seconds."),
+        ("heart_full", "Heart (rare): restores a lost heart."),
         (None, "Move with  <-  ->  or  A / D."),
         (None, "Double-tap a direction to DASH (3s speed boost)."),
         (None, "Game over? Watch a short ad to continue & keep your score."),

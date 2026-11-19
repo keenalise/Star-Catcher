@@ -73,44 +73,47 @@ def save(s, name, size):
 # --------------------------------------------------------------------------- #
 def make_apple(out_size=512):
     S = out_size * SS
-    cx, cy = S * 0.5, S * 0.52
-    r = S * 0.255
+    cx = S * 0.5
 
-    # Silhouette built from circles only, kept well inside the canvas so the
-    # rounded bottom is never clipped.
+    # Silhouette: one large body circle gives a single clean round bottom; two
+    # higher "shoulder" circles widen the top and leave a dimple at top-centre
+    # for the stem. The shoulders sit inside the body lower down, so they never
+    # create a second bump at the bottom.
     mask = surf(S, S)
-    for dx, dy in [(-0.13, -0.04), (0.13, -0.04)]:
-        pygame.draw.circle(mask, (255, 255, 255, 255),
-                           (int(cx + dx * S), int(cy + dy * S)), int(r))
-    pygame.draw.circle(mask, (255, 255, 255, 255), (int(cx), int(cy + 0.03 * S)), int(r * 1.02))
-    pygame.draw.circle(mask, (255, 255, 255, 255), (int(cx), int(cy + 0.12 * S)), int(r * 0.9))
+    # A single clean ellipse body, a touch taller than wide.
+    pygame.draw.ellipse(mask, (255, 255, 255, 255), (cx - 0.275 * S, 0.29 * S, 0.55 * S, 0.57 * S))
 
     art = surf(S, S)
     art.blit(mask.copy(), (0, 0))  # white base; recolour below
     base = surf(S, S)
-    base.fill((205, 34, 34, 255))
+    base.fill((206, 36, 36, 255))
     art.blit(base, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-    # shading
-    art.blit(radial(S, (120, 6, 6, 170), (120, 6, 6, 0), (0.58, 0.66), 0.5), (0, 0))
-    art.blit(radial(S, (255, 140, 120, 205), (255, 140, 120, 0), (0.38, 0.34), 0.4), (0, 0))
-    art.blit(radial(S, (255, 255, 255, 235), (255, 255, 255, 0), (0.35, 0.29), 0.11), (0, 0))
-
+    # shading: dark vignette lower-right, warm glow upper-left, glossy specular
+    art.blit(radial(S, (120, 8, 8, 175), (120, 8, 8, 0), (0.60, 0.66), 0.54), (0, 0))
+    art.blit(radial(S, (255, 150, 130, 205), (255, 150, 130, 0), (0.38, 0.40), 0.44), (0, 0))
+    art.blit(radial(S, (255, 255, 255, 240), (255, 255, 255, 0), (0.37, 0.34), 0.10), (0, 0))
     apple = clip_to(art, mask)
 
-    # stem + leaf (drawn on top, above the body)
-    topy = cy - 0.04 * S - r
+    # small dark dimple at the very top where the stem sits
+    pygame.draw.circle(apple, (120, 16, 16, 110), (int(cx), int(S * 0.30)), int(S * 0.035))
+
+    # stem + two-tone leaf (drawn above the body)
+    topy = S * 0.30
     pygame.draw.line(apple, (96, 60, 28),
-                     (int(cx), int(topy + 0.03 * S)),
-                     (int(cx + 0.03 * S), int(topy - 0.08 * S)), int(S * 0.02))
-    leaf = [(cx + 0.03 * S, topy - 0.06 * S),
-            (cx + 0.19 * S, topy - 0.15 * S),
-            (cx + 0.18 * S, topy - 0.03 * S),
-            (cx + 0.06 * S, topy + 0.02 * S)]
-    pygame.draw.polygon(apple, (70, 165, 66), [(int(x), int(y)) for x, y in leaf])
-    pygame.draw.polygon(apple, (110, 200, 96),
-                        [(int(cx + 0.04 * S), int(topy - 0.05 * S)),
-                         (int(cx + 0.13 * S), int(topy - 0.11 * S)),
-                         (int(cx + 0.10 * S), int(topy - 0.02 * S))])
+                     (int(cx), int(topy)), (int(cx + 0.02 * S), int(topy - 0.11 * S)), int(S * 0.022))
+    leaf = [(cx + 0.02 * S, topy - 0.09 * S),
+            (cx + 0.20 * S, topy - 0.15 * S),
+            (cx + 0.19 * S, topy - 0.02 * S),
+            (cx + 0.05 * S, topy - 0.01 * S)]
+    pygame.draw.polygon(apple, (64, 158, 60), [(int(x), int(y)) for x, y in leaf])
+    pygame.draw.polygon(apple, (108, 198, 94),
+                        [(int(cx + 0.03 * S), int(topy - 0.07 * S)),
+                         (int(cx + 0.14 * S), int(topy - 0.12 * S)),
+                         (int(cx + 0.11 * S), int(topy - 0.03 * S))])
+    # leaf vein
+    pygame.draw.line(apple, (40, 120, 44),
+                     (int(cx + 0.05 * S), int(topy - 0.05 * S)),
+                     (int(cx + 0.19 * S), int(topy - 0.11 * S)), int(S * 0.008))
     save(apple, "apple.png", (out_size, out_size))
 
 
@@ -286,39 +289,92 @@ def make_forest(w=1920, h=1680):
             pygame.draw.circle(cl, (255, 255, 255, 180), (int(rr * 1.5), int(rr * 1.5)), rr)
             s.blit(cl, (cx + dx - rr, cy + dy - rr))
 
-    def tree(x, top_y, scale, greens):
-        tw = int(40 * scale)
-        pygame.draw.rect(s, (96, 64, 34), (x - tw // 2, top_y, tw, ground_y - top_y + 40))
-        r = int(120 * scale)
-        cx, cy = x, top_y - int(20 * scale)
-        for col, ox, oy, rf in [(greens[0], 0, 0, 1.0), (greens[0], -0.6, 0.3, 0.78),
-                                (greens[0], 0.6, 0.3, 0.78), (greens[1], -0.3, -0.2, 0.62),
-                                (greens[1], 0.35, -0.1, 0.58), (greens[2], -0.05, -0.45, 0.42)]:
-            pygame.draw.circle(s, col, (int(cx + ox * r), int(cy + oy * r)), int(r * rf))
+    def tree(x, top_y, scale, greens, speckle=True, rnd=None):
+        """A fuller tree: tapered shaded trunk + a rounded, dimensional canopy.
 
-    # far hazy tree line
+        ``greens`` = (underside, dark, mid, light) shades, dark -> light.
+        """
+        under, dark, mid, light = greens
+        base_y = ground_y + 40
+        tw = 46 * scale
+        # tapered trunk (wider at the base)
+        canopy_y = top_y - int(14 * scale)
+        trunk = [(x - tw * 0.55, base_y), (x + tw * 0.55, base_y),
+                 (x + tw * 0.26, canopy_y + 30 * scale), (x - tw * 0.26, canopy_y + 30 * scale)]
+        pygame.draw.polygon(s, (104, 70, 38), [(int(a), int(b)) for a, b in trunk])
+        pygame.draw.line(s, (128, 90, 52), (x - tw * 0.34, base_y),
+                         (x - tw * 0.16, canopy_y), max(2, int(5 * scale)))   # lit side
+        pygame.draw.line(s, (74, 48, 26), (x + tw * 0.38, base_y),
+                         (x + tw * 0.18, canopy_y), max(3, int(8 * scale)))   # shadow side
+        # a couple of branches
+        for sgn in (-1, 1):
+            pygame.draw.line(s, (92, 60, 32),
+                             (int(x), int(canopy_y + 50 * scale)),
+                             (int(x + sgn * 55 * scale), int(canopy_y + 8 * scale)),
+                             max(2, int(7 * scale)))
+
+        r = 120 * scale
+        cx, cy = x, canopy_y - int(8 * scale)
+        blob = [(0, 0.05, 1.0), (-0.58, 0.28, 0.72), (0.58, 0.28, 0.72),
+                (-0.33, -0.28, 0.64), (0.33, -0.28, 0.64), (0, -0.52, 0.5),
+                (0, 0.42, 0.74)]
+        # underside / dark base
+        for ox, oy, rf in blob:
+            pygame.draw.circle(s, dark, (int(cx + ox * r), int(cy + oy * r)), int(r * rf))
+        for ox, oy, rf in [(0, 0.5, 0.6), (-0.42, 0.42, 0.44), (0.42, 0.42, 0.44)]:
+            pygame.draw.circle(s, under, (int(cx + ox * r), int(cy + oy * r)), int(r * rf))
+        # mid tone, nudged up
+        for ox, oy, rf in blob:
+            pygame.draw.circle(s, mid, (int(cx + ox * r), int(cy + (oy - 0.12) * r)), int(r * rf * 0.82))
+        # top-left highlights
+        for ox, oy, rf in [(-0.3, -0.4, 0.42), (-0.03, -0.55, 0.32), (0.22, -0.34, 0.3),
+                           (-0.45, -0.12, 0.3)]:
+            pygame.draw.circle(s, light, (int(cx + ox * r), int(cy + oy * r)), int(r * rf))
+        # leaf speckles for texture
+        if speckle and rnd is not None:
+            for _ in range(int(26 * scale)):
+                a = rnd.uniform(0, 6.283); rad = rnd.uniform(0, r * 0.95)
+                px, py = cx + math.cos(a) * rad, cy + math.sin(a) * rad * 0.85
+                pygame.draw.circle(s, light if rnd.random() < 0.5 else mid,
+                                   (int(px), int(py)), max(1, int(3 * scale)))
+
+    # far hazy tree line (bluish, low contrast)
     rnd = random.Random(11)
     x = -40
     while x < w + 80:
         tree(x, rnd.randint(int(h * 0.30), int(h * 0.42)), rnd.uniform(0.6, 0.9),
-             [(60, 120, 80), (74, 140, 92), (96, 160, 110)])
+             [(70, 118, 96), (86, 134, 104), (104, 152, 118), (128, 176, 138)],
+             speckle=False)
         x += rnd.randint(150, 240)
     # near rich trees
     rnd = random.Random(7)
     x = 20
     while x < w + 100:
-        tree(x, rnd.randint(int(h * 0.12), int(h * 0.26)), rnd.uniform(0.95, 1.5),
-             [(32, 108, 44), (52, 140, 58), (96, 178, 72)])
-        x += rnd.randint(190, 300)
+        tree(x, rnd.randint(int(h * 0.12), int(h * 0.26)), rnd.uniform(1.0, 1.5),
+             [(22, 86, 38), (34, 112, 46), (58, 146, 62), (104, 190, 86)], rnd=rnd)
+        x += rnd.randint(200, 300)
 
     # ground
     pygame.draw.rect(s, (66, 128, 42), (0, ground_y, w, h - ground_y))
     pygame.draw.rect(s, (104, 176, 66), (0, ground_y, w, int(h * 0.05)))
+    # bushes along the forest floor for depth
+    rnd = random.Random(21)
+    x = 40
+    while x < w:
+        bx, by, bs = x, ground_y + int(rnd.uniform(0, 30)), rnd.uniform(0.5, 1.0)
+        for ox, oy, rf in [(0, 0, 1.0), (-0.6, 0.15, 0.7), (0.6, 0.15, 0.7), (0, -0.3, 0.6)]:
+            pygame.draw.circle(s, (46, 110, 40),
+                               (int(bx + ox * 70 * bs), int(by + oy * 70 * bs)), int(70 * bs * rf))
+        for ox, oy, rf in [(-0.2, -0.3, 0.45), (0.25, -0.2, 0.4)]:
+            pygame.draw.circle(s, (74, 150, 60),
+                               (int(bx + ox * 70 * bs), int(by + oy * 70 * bs)), int(70 * bs * rf))
+        x += rnd.randint(150, 320)
+    # grass blades
     rnd = random.Random(5)
-    for _ in range(600):
+    for _ in range(800):
         gx = rnd.randint(0, w); gy = rnd.randint(ground_y, h)
-        bl = rnd.randint(4, 12)
-        pygame.draw.line(s, (84, 150, 54), (gx, gy), (gx, gy - bl), 2)
+        bl = rnd.randint(5, 14)
+        pygame.draw.line(s, (84, 150, 54), (gx, gy), (gx + rnd.randint(-2, 2), gy - bl), 2)
 
     pygame.image.save(s, os.path.join(ASSETS, "forest_bg.png"))
     print("  wrote forest_bg.png", (w, h))

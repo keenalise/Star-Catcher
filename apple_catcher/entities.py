@@ -6,7 +6,11 @@ import pygame
 
 from . import settings as S
 
-APPLE, BOMB, SHIELD, EXTEND = "apple", "bomb", "shield", "extend"
+APPLE, BOMB, SHIELD, EXTEND, HEART = "apple", "bomb", "shield", "extend", "heart"
+
+# Falling-object kind -> image asset name
+ASSET_NAME = {APPLE: "apple", BOMB: "bomb", SHIELD: "shield",
+              EXTEND: "extend", HEART: "heart_full"}
 
 
 class FallingObject:
@@ -22,7 +26,9 @@ class FallingObject:
             self.kind = SHIELD
         elif roll < S.P_SHIELD + S.P_EXTEND:
             self.kind = EXTEND
-        elif roll < S.P_SHIELD + S.P_EXTEND + S.P_BOMB:
+        elif roll < S.P_SHIELD + S.P_EXTEND + S.P_HEART:
+            self.kind = HEART
+        elif roll < S.P_SHIELD + S.P_EXTEND + S.P_HEART + S.P_BOMB:
             self.kind = BOMB
         else:
             self.kind = APPLE
@@ -93,7 +99,7 @@ class FallingObject:
             pygame.draw.circle(puff, (255, 255, 255, alpha),
                                (ring_r + 3, ring_r + 3), ring_r, max(2, int(self.radius * 0.2)))
             screen.blit(puff, (int(self.x) - ring_r - 3, int(self.y) - ring_r - 3))
-        img = assets.scaled(self.kind, (size, size))
+        img = assets.scaled(ASSET_NAME[self.kind], (size, size))
         rect = img.get_rect(center=(int(self.x), int(self.y)))
         screen.blit(img, rect)
 

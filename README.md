@@ -28,6 +28,7 @@ Catch apples, dodge bombs, grab power-ups, and chase a new high score.
 | ⚡ **Dash boost** | Double-tap a direction to dash — the basket moves faster for 3 seconds. |
 | 🛡️ **Shield power-up** | A rare drop that shields the basket from bombs for 15 seconds. |
 | ↔️ **Basket extension** | A rare drop that widens the basket for 9 seconds. |
+| ❤️ **Heart drop** | A rare drop that restores a lost heart (or a small score bonus if you're already full). |
 | ⏱️ **Live power-up timers** | Active shield / extension / dash timers are shown at the top of the screen. |
 | 📺 **Watch-ad continue** | After a game over, watch a short ad to revive and keep your score. |
 | 🏆 **Persistent high score** | Your best run is saved between sessions. |
