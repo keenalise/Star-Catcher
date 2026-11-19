@@ -20,12 +20,12 @@ player_width = 50
 player_height = 50
 player_x = screen_width // 2
 player_y = screen_height - player_height - 10
-player_speed = 0.5
+player_speed = 0.9
 
 # Star attributes
 star_width = 30
 star_height = 30
-star_speed = 0.95
+star_speed = 0.5
 star_x = random.randint(0, screen_width - star_width)
 star_y = -star_height
 
