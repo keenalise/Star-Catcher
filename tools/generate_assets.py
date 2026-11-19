@@ -73,16 +73,17 @@ def save(s, name, size):
 # --------------------------------------------------------------------------- #
 def make_apple(out_size=512):
     S = out_size * SS
-    cx, cy = S * 0.5, S * 0.55
-    r = S * 0.30
+    cx, cy = S * 0.5, S * 0.52
+    r = S * 0.255
 
+    # Silhouette built from circles only, kept well inside the canvas so the
+    # rounded bottom is never clipped.
     mask = surf(S, S)
-    for dx in (-0.13, 0.13):
+    for dx, dy in [(-0.13, -0.04), (0.13, -0.04)]:
         pygame.draw.circle(mask, (255, 255, 255, 255),
-                           (int(cx + dx * S), int(cy - 0.03 * S)), int(r))
-    pygame.draw.circle(mask, (255, 255, 255, 255), (int(cx), int(cy + 0.06 * S)), int(r))
-    pygame.draw.ellipse(mask, (255, 255, 255, 255),
-                        (cx - r, cy - 0.02 * S, 2 * r, 2 * r * 0.9))
+                           (int(cx + dx * S), int(cy + dy * S)), int(r))
+    pygame.draw.circle(mask, (255, 255, 255, 255), (int(cx), int(cy + 0.03 * S)), int(r * 1.02))
+    pygame.draw.circle(mask, (255, 255, 255, 255), (int(cx), int(cy + 0.12 * S)), int(r * 0.9))
 
     art = surf(S, S)
     art.blit(mask.copy(), (0, 0))  # white base; recolour below
@@ -90,25 +91,26 @@ def make_apple(out_size=512):
     base.fill((205, 34, 34, 255))
     art.blit(base, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     # shading
-    art.blit(radial(S, (120, 6, 6, 170), (120, 6, 6, 0), (0.6, 0.66), 0.55), (0, 0))
-    art.blit(radial(S, (255, 140, 120, 200), (255, 140, 120, 0), (0.37, 0.33), 0.42), (0, 0))
-    art.blit(radial(S, (255, 255, 255, 235), (255, 255, 255, 0), (0.34, 0.27), 0.12), (0, 0))
+    art.blit(radial(S, (120, 6, 6, 170), (120, 6, 6, 0), (0.58, 0.66), 0.5), (0, 0))
+    art.blit(radial(S, (255, 140, 120, 205), (255, 140, 120, 0), (0.38, 0.34), 0.4), (0, 0))
+    art.blit(radial(S, (255, 255, 255, 235), (255, 255, 255, 0), (0.35, 0.29), 0.11), (0, 0))
 
     apple = clip_to(art, mask)
 
-    # stem + leaf (drawn on top, outside the body mask)
+    # stem + leaf (drawn on top, above the body)
+    topy = cy - 0.04 * S - r
     pygame.draw.line(apple, (96, 60, 28),
-                     (int(cx), int(cy - r - 0.02 * S)),
-                     (int(cx + 0.03 * S), int(cy - r - 0.14 * S)), int(S * 0.022))
-    leaf = [(cx + 0.03 * S, cy - r - 0.12 * S),
-            (cx + 0.20 * S, cy - r - 0.22 * S),
-            (cx + 0.19 * S, cy - r - 0.10 * S),
-            (cx + 0.07 * S, cy - r - 0.03 * S)]
+                     (int(cx), int(topy + 0.03 * S)),
+                     (int(cx + 0.03 * S), int(topy - 0.08 * S)), int(S * 0.02))
+    leaf = [(cx + 0.03 * S, topy - 0.06 * S),
+            (cx + 0.19 * S, topy - 0.15 * S),
+            (cx + 0.18 * S, topy - 0.03 * S),
+            (cx + 0.06 * S, topy + 0.02 * S)]
     pygame.draw.polygon(apple, (70, 165, 66), [(int(x), int(y)) for x, y in leaf])
     pygame.draw.polygon(apple, (110, 200, 96),
-                        [(int(cx + 0.03 * S), int(cy - r - 0.12 * S)),
-                         (int(cx + 0.14 * S), int(cy - r - 0.19 * S)),
-                         (int(cx + 0.10 * S), int(cy - r - 0.10 * S))])
+                        [(int(cx + 0.04 * S), int(topy - 0.05 * S)),
+                         (int(cx + 0.13 * S), int(topy - 0.11 * S)),
+                         (int(cx + 0.10 * S), int(topy - 0.02 * S))])
     save(apple, "apple.png", (out_size, out_size))
 
 
@@ -325,7 +327,22 @@ def make_forest(w=1920, h=1680):
 # --------------------------------------------------------------------------- #
 #  Logo + window icon
 # --------------------------------------------------------------------------- #
-def make_logo():
+def make_icon():
+    """Window/taskbar icon, derived from the apple."""
+    apple = pygame.image.load(os.path.join(ASSETS, "apple.png"))
+    icon = pygame.transform.smoothscale(apple, (256, 256))
+    pygame.image.save(icon, os.path.join(ASSETS, "icon.png"))
+    print("  wrote icon.png", (256, 256))
+
+
+def make_logo(force=False):
+    """Default procedural logo. Skipped if a logo already exists so a
+    user-supplied ``logo.png`` is never clobbered (pass force=True to override).
+    """
+    logo_path = os.path.join(ASSETS, "logo.png")
+    if os.path.exists(logo_path) and not force:
+        print("  kept existing logo.png (use --force-logo to regenerate)")
+        return
     apple = pygame.image.load(os.path.join(ASSETS, "apple.png"))
     W, H = 1300, 520
     s = surf(W, H)
@@ -348,15 +365,13 @@ def make_logo():
     stamp("CATCHER", font, 440, 240, (255, 214, 92))
     stamp("~ forest edition ~", sub, 446, 420, (235, 255, 235), (30, 70, 40))
 
-    pygame.image.save(s, os.path.join(ASSETS, "logo.png"))
+    pygame.image.save(s, logo_path)
     print("  wrote logo.png", (W, H))
-
-    icon = pygame.transform.smoothscale(apple, (256, 256))
-    pygame.image.save(icon, os.path.join(ASSETS, "icon.png"))
-    print("  wrote icon.png", (256, 256))
 
 
 if __name__ == "__main__":
+    import sys
+    force_logo = "--force-logo" in sys.argv
     print("Generating assets into", ASSETS)
     make_apple()
     make_bomb()
@@ -365,5 +380,6 @@ if __name__ == "__main__":
     make_hearts()
     make_basket()
     make_forest()
-    make_logo()
+    make_icon()
+    make_logo(force=force_logo)
     print("Done.")

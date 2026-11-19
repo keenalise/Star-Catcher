@@ -12,7 +12,7 @@ from .effects import Blast
 from .entities import FallingObject, Basket, APPLE, BOMB, SHIELD, EXTEND
 from .storage import load_highscore, save_highscore
 
-MENU, PLAYING, OVER = "menu", "playing", "over"
+MENU, PLAYING, OVER, HELP = "menu", "playing", "over", "help"
 
 
 class Game:
@@ -35,7 +35,9 @@ class Game:
 
         # buttons (positioned each frame by _layout)
         self.btn_play = ui.Button("NEW GAME", self.assets.font_mid, S.GREEN, S.GREEN_HI)
+        self.btn_help = ui.Button("HOW TO PLAY", self.assets.font_small, S.BLUE, S.BLUE_HI)
         self.btn_quit = ui.Button("QUIT", self.assets.font_small, (120, 60, 60), (160, 80, 80))
+        self.btn_back = ui.Button("BACK", self.assets.font_small, S.BLUE, S.BLUE_HI)
         self.btn_again = ui.Button("PLAY AGAIN", self.assets.font_mid, S.GREEN, S.GREEN_HI)
         self.btn_menu = ui.Button("MAIN MENU", self.assets.font_small, S.BLUE, S.BLUE_HI)
         self.btn_ad = ui.Button("WATCH AD TO CONTINUE", self.assets.font_small,
@@ -121,9 +123,10 @@ class Game:
     def toggle_fullscreen(self):
         self.is_fullscreen = not self.is_fullscreen
         if self.is_fullscreen:
-            info = pygame.display.Info()
-            self.screen = pygame.display.set_mode((info.current_w, info.current_h),
-                                                  pygame.FULLSCREEN)
+            # (0, 0) tells SDL to use the full desktop resolution. Querying
+            # display.Info() here would return the *window* size, not the
+            # desktop, which left the screen only partly painted.
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
         else:
             self.screen = pygame.display.set_mode(self.windowed, pygame.RESIZABLE)
         self.width, self.height = self.screen.get_size()
@@ -174,7 +177,7 @@ class Game:
         if key == pygame.K_ESCAPE:
             if self.is_fullscreen:
                 self.toggle_fullscreen()
-            elif self.scene in (PLAYING, OVER):
+            elif self.scene in (PLAYING, OVER, HELP):
                 self.scene = MENU
             else:
                 return False
@@ -185,8 +188,11 @@ class Game:
                 self._handle_tap(-1)
             elif key in (pygame.K_RIGHT, pygame.K_d):
                 self._handle_tap(1)
-        elif self.scene == MENU and key == pygame.K_RETURN:
-            self.start_new_game()
+        elif self.scene == MENU:
+            if key == pygame.K_RETURN:
+                self.start_new_game()
+            elif key == pygame.K_h:
+                self.scene = HELP
         elif self.scene == OVER:
             if key == pygame.K_r:
                 self.start_new_game()
@@ -200,8 +206,13 @@ class Game:
         if self.scene == MENU:
             if self.btn_play.hit(pos):
                 self.start_new_game()
+            elif self.btn_help.hit(pos):
+                self.scene = HELP
             elif self.btn_quit.hit(pos):
                 return False
+        elif self.scene == HELP:
+            if self.btn_back.hit(pos):
+                self.scene = MENU
         elif self.scene == OVER:
             if self.btn_again.hit(pos):
                 self.start_new_game()
@@ -225,7 +236,7 @@ class Game:
     # --- update -------------------------------------------------------------
     def update(self, dt):
         self.now += dt
-        if self.scene == MENU:
+        if self.scene in (MENU, HELP):
             self._update_menu(dt)
         elif self.scene == PLAYING:
             self._update_play(dt)
@@ -317,13 +328,18 @@ class Game:
     def _layout(self):
         cx = self.width // 2
         h = self.height
-        self.btn_play.place((cx, int(h * 0.52)), (300, 70))
-        self.btn_quit.place((cx, int(h * 0.62)), (300, 60))
+        self.btn_play.place((cx, int(h * 0.55)), (300, 64))
+        self.btn_help.place((cx, int(h * 0.645)), (300, 58))
+        self.btn_quit.place((cx, int(h * 0.735)), (300, 56))
 
         panel_top = h // 2 - 250
         self.btn_ad.place((cx, panel_top + 360), (420, 58))
         self.btn_again.place((cx, panel_top + 430), (300, 56))
         self.btn_menu.place((cx, panel_top + 495), (300, 52))
+
+        # Help-screen back button sits at the bottom of the help panel
+        panel_h = min(600, int(h * 0.84))
+        self.btn_back.place((cx, h // 2 + panel_h // 2 - 48), (240, 52))
         self.btn_ad.text = "CONTINUE  (free!)" if self.ad_unlocked else "WATCH AD TO CONTINUE"
         self.btn_ad.base = (60, 150, 70) if self.ad_unlocked else (200, 120, 40)
         self.btn_ad.hover = (80, 185, 90) if self.ad_unlocked else (230, 150, 60)
@@ -335,6 +351,8 @@ class Game:
 
         if self.scene == MENU:
             self._draw_menu(mouse)
+        elif self.scene == HELP:
+            self._draw_help(mouse)
         elif self.scene == PLAYING:
             self._draw_play(mouse)
         else:
@@ -342,6 +360,14 @@ class Game:
 
         ui.draw_window_buttons(self.screen, self.width, self.is_fullscreen, mouse)
         pygame.display.flip()
+
+    def _draw_logo(self, cx, cy, max_w_frac, max_h_frac):
+        logo = self.assets.img("logo")
+        max_w, max_h = self.width * max_w_frac, self.height * max_h_frac
+        scale = min(max_w / logo.get_width(), max_h / logo.get_height())
+        lw, lh = int(logo.get_width() * scale), int(logo.get_height() * scale)
+        logo_s = self.assets.scaled("logo", (lw, lh))
+        self.screen.blit(logo_s, logo_s.get_rect(center=(cx, cy)))
 
     def _draw_menu(self, mouse):
         for d in self._menu_decor:
@@ -353,28 +379,64 @@ class Game:
         self.screen.blit(overlay, (0, 0))
 
         cx = self.width // 2
-        logo = self.assets.img("logo")
-        lw = min(620, int(self.width * 0.72))
-        lh = int(lw * logo.get_height() / logo.get_width())
-        logo_s = self.assets.scaled("logo", (lw, lh))
-        self.screen.blit(logo_s, logo_s.get_rect(center=(cx, int(self.height * 0.26))))
+        self._draw_logo(cx, int(self.height * 0.23), 0.62, 0.36)
 
-        self.btn_play.draw(self.screen, mouse)
-        self.btn_quit.draw(self.screen, mouse)
-
-        hs = pygame.Rect(0, 0, 340, 86)
-        hs.center = (cx, int(self.height * 0.74))
+        # compact high-score chip
+        hs = pygame.Rect(0, 0, 250, 64)
+        hs.center = (cx, int(self.height * 0.455))
         s = pygame.Surface(hs.size, pygame.SRCALPHA)
         s.fill((0, 0, 0, 130))
         self.screen.blit(s, hs.topleft)
         pygame.draw.rect(self.screen, S.GOLD, hs, width=3, border_radius=14)
-        ui.text_center(self.screen, "HIGH SCORE", self.assets.font_tiny, cx, hs.top + 24,
+        ui.text_center(self.screen, "HIGH SCORE", self.assets.font_tiny, cx, hs.top + 18,
                        S.GOLD, shadow=False)
-        ui.text_center(self.screen, str(self.high_score), self.assets.font_big, cx,
-                       hs.top + 58, S.WHITE)
+        ui.text_center(self.screen, str(self.high_score), self.assets.font_mid, cx,
+                       hs.top + 44, S.WHITE)
 
-        ui.text_center(self.screen, "Move:  <-  ->   |   double-tap to dash   |   catch apples, dodge bombs",
-                       self.assets.font_tiny, cx, int(self.height * 0.84), (235, 235, 235))
+        self.btn_play.draw(self.screen, mouse)
+        self.btn_help.draw(self.screen, mouse)
+        self.btn_quit.draw(self.screen, mouse)
+
+    HELP_LINES = [
+        ("apple", "Catch falling apples - each one is worth 1 point."),
+        ("bomb", "Never catch a bomb - it explodes and ends the game!"),
+        ("heart_full", "You start with 3 hearts. Miss an apple, lose a heart."),
+        ("apple", "Watch out: apples morph into bombs mid-fall..."),
+        ("bomb", "...and bombs morph into apples. Don't be fooled!"),
+        ("shield", "Shield (rare): blocks bombs for 15 seconds."),
+        ("extend", "Extend (rare): widens your basket for 9 seconds."),
+        (None, "Move with  <-  ->  or  A / D."),
+        (None, "Double-tap a direction to DASH (3s speed boost)."),
+        (None, "Game over? Watch a short ad to continue & keep your score."),
+    ]
+
+    def _draw_help(self, mouse):
+        overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 160))
+        self.screen.blit(overlay, (0, 0))
+
+        cx = self.width // 2
+        pw = min(680, int(self.width * 0.9))
+        ph = min(600, int(self.height * 0.84))
+        panel = pygame.Rect(0, 0, pw, ph)
+        panel.center = (cx, self.height // 2)
+        pygame.draw.rect(self.screen, S.PANEL_BG, panel, border_radius=24)
+        pygame.draw.rect(self.screen, S.GOLD, panel, width=3, border_radius=24)
+
+        ui.text_center(self.screen, "HOW TO PLAY", self.assets.font_big, cx,
+                       panel.top + 48, S.GOLD)
+
+        x = panel.left + 34
+        y = panel.top + 104
+        step = (panel.bottom - 80 - y) / len(self.HELP_LINES)
+        for icon, text in self.HELP_LINES:
+            if icon:
+                self.screen.blit(self.assets.scaled(icon, (30, 30)), (x, int(y) - 4))
+            label = self.assets.font_tiny.render(text, True, S.WHITE)
+            self.screen.blit(label, (x + 42, int(y)))
+            y += step
+
+        self.btn_back.draw(self.screen, mouse)
 
     def _draw_play(self, mouse):
         if not self.dying:

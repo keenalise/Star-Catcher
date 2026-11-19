@@ -35,9 +35,11 @@ Catch apples, dodge bombs, grab power-ups, and chase a new high score.
 | 🎨 **High-res art & sound** | All artwork and sound effects are generated procedurally — no external assets to download. |
 
 <div align="center">
-<img src="docs/screenshot_menu.png" width="330" alt="Main menu">
-&nbsp;&nbsp;
-<img src="docs/screenshot_gameover.png" width="330" alt="Game over screen">
+<img src="docs/screenshot_menu.png" width="265" alt="Main menu">
+&nbsp;
+<img src="docs/screenshot_howto.png" width="265" alt="How to play">
+&nbsp;
+<img src="docs/screenshot_gameover.png" width="265" alt="Game over screen">
 </div>
 
 ---
@@ -76,6 +78,12 @@ The PNG assets ship with the repo, but you can regenerate them any time:
 ```bash
 python tools/generate_assets.py
 ```
+> Regenerating **won't overwrite a custom `assets/logo.png`** — your own logo is
+> preserved. Pass `--force-logo` if you want to restore the default one.
+
+### Using your own logo
+Drop any image in as **`assets/logo.png`** (PNG with transparency works best) and
+it's shown on the menu automatically — no code changes needed.
 
 ### 4. Play
 ```bash
