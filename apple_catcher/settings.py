@@ -27,6 +27,7 @@ SPEED_BY_SCORE = 9          # +px/s per apple caught
 # Spawn probabilities for each new drop (apple fills the remainder)
 P_SHIELD = 0.05
 P_EXTEND = 0.05
+P_HEART = 0.045
 P_BOMB = 0.18
 # Chance a falling apple/bomb morphs into the other type mid-fall
 TRANSFORM_CHANCE = 0.30
